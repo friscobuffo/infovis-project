@@ -1,0 +1,37 @@
+[
+{
+    "id": "0",
+    "children": ["1", "2"],
+    "parent": null
+},
+{
+    "id": "1",
+    "children": ["3", "4"],
+    "parent": "0"
+},
+{
+    "id": "2",
+    "children": ["5", "6"],
+    "parent": "0"
+},
+{
+    "id": "3",
+    "children": [],
+    "parent": "1"
+},
+{
+    "id": "4",
+    "children": [],
+    "parent": "1"
+},
+{
+    "id": "5",
+    "children": [],
+    "parent": "2"
+},
+{
+    "id": "6",
+    "children": [],
+    "parent": "2"
+}
+]

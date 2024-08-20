@@ -1,0 +1,8 @@
+Questo progetto ha lo scopo di implementare un disegnatore di alberi che utilizzi
+un paradigma force-directed. Allo scopo di ottenere un disegno planare, i nodi non
+vengono messi in campo tutti insieme, ma viene prima creata una radice con i suoi figli,
+poi vengono introdotti i figli dei figli (i nipoti della radice). Quando il disegno
+si è stabilizzato vengno introdotti i figli delle foglie dell'albero corrente.
+Si procede così fino a che l'albero non è completato. Il progetto prevede una
+comparazione con gli algoritmi classici force-directed e una sperimentazione per
+determinare le temisticiche delle operazioni.
