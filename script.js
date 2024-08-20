@@ -9,7 +9,7 @@ function distance(node1, node2) {
 
 const elasticConstant = 0.5;
 const baseSpringLength = 60.0;
-const electrostaticConstant = 4000;
+const electrostaticConstant = 3000;
 
 function computeSpringForce(node) {
     const dParent = distance(node, node.parent);
@@ -27,7 +27,8 @@ function computeElectroForce(node, nodesOnBoard) {
     nodesOnBoard.forEach(function(otherNode) {
         if (otherNode.id !== node.id) {
             const d = distance(node, otherNode);
-            const electroTerm = electrostaticConstant/(d*d);
+            const multiplier = 1 + node.children.length + otherNode.children.length;
+            const electroTerm = multiplier*electrostaticConstant/(d*d);
             const deltaX = node.x - otherNode.x;
             const deltaY = node.y - otherNode.y;
             electroForceX += electroTerm*(deltaX/d);
@@ -137,17 +138,18 @@ d3.json("data.json")
         svg = svgBoard;
         svgBoard.attr("width", boardWidth);
         svgBoard.attr("height", boardHeight);
-        let root = computeTree(data);
+        const root = computeTree(data);
         const depthMap = createDepthMap(root);
         depthMapGlobal = depthMap;
-        assingLevels(depthMap);
+        // assingLevels(depthMap);
         assignRandomInitialPositions(depthMap);
+        // calculateSubtreeSizes(root);
         drawNextLayer();
     })
     .catch(error => console.log(error));
 
 function drawNextLayer() {
-    currentDepth = currentDepth + 1;
+    currentDepth += 1;
     drawNodesOfDepth(fixedNodesInTheBoard, depthMapGlobal, currentDepth, svg);
     fixedNodesInTheBoard = fixedNodesInTheBoard.concat(depthMapGlobal.get(currentDepth));
     if (currentDepth === depthMapGlobal.size-1)
