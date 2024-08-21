@@ -1,15 +1,22 @@
 const boardHeight = Math.floor(0.8*window.screen.height);
 const boardWidth = Math.floor(0.8*window.screen.width);
 
+const elasticConstant = 0.8;
+const baseSpringLength = 10.0;
+const electrostaticConstant = 6000;
+
+let fixedNodesInTheBoard = [];
+let currentDepth = -1;
+let svgBoard;
+let depthMap;
+
+const timeoutBetweenLayers = 2000;
+
 function distance(node1, node2) {
     deltaX = node1.x - node2.x;
     deltaY = node1.y - node2.y;
     return Math.sqrt(deltaX*deltaX + deltaY*deltaY);
 }
-
-const elasticConstant = 0.5;
-const baseSpringLength = 60.0;
-const electrostaticConstant = 3000;
 
 function computeSpringForce(node) {
     const dParent = distance(node, node.parent);
@@ -18,7 +25,7 @@ function computeSpringForce(node) {
     const deltaY = node.y - node.parent.y;
     const springForceX = springTerm*deltaX/dParent;
     const springForceY = springTerm*deltaY/dParent;
-    return [springForceX, springForceY];
+    return {x: springForceX, y: springForceY};
 }
 
 function computeElectroForce(node, nodesOnBoard) {
@@ -27,7 +34,7 @@ function computeElectroForce(node, nodesOnBoard) {
     nodesOnBoard.forEach(function(otherNode) {
         if (otherNode.id !== node.id) {
             const d = distance(node, otherNode);
-            const multiplier = 1 + node.children.length + otherNode.children.length;
+            const multiplier = 1.0 + 2*node.children.length + 2*otherNode.children.length;
             const electroTerm = multiplier*electrostaticConstant/(d*d);
             const deltaX = node.x - otherNode.x;
             const deltaY = node.y - otherNode.y;
@@ -35,29 +42,31 @@ function computeElectroForce(node, nodesOnBoard) {
             electroForceY += electroTerm*(deltaY/d);
         }
     });
-    return [electroForceX, electroForceY];
+    return {x: electroForceX, y: electroForceY};
 }
 
-function updateNodes(fixedNodesInTheBoard, depthMap, depth, svgBoard) {
-    if (depth === 0) return true;
+function updateNodes() {
+    console.log("updating nodes");
+    if (currentDepth === 0) return true;
     let totalForce = 0.0;
-    const nodesToUpdate = depthMap.get(depth);
+    const nodesToUpdate = depthMap.get(currentDepth);
     const nodesOnBoard = fixedNodesInTheBoard.concat(nodesToUpdate);
     nodesToUpdate.forEach(function(node) {
         const springForce = computeSpringForce(node);
         const electroForce = computeElectroForce(node, nodesOnBoard);
-        const totalForceX = springForce[0] + electroForce[0];
-        const totalForceY = springForce[1] + electroForce[1];
-
+        const centerRepulsiveForce = {x: (node.x - depthMap.get(0)[0].x),
+                                      y: (node.y - depthMap.get(0)[0].y)};
+        normalizeVector(centerRepulsiveForce);
+        const totalForceX = springForce.x + electroForce.x + centerRepulsiveForce.x*40;
+        const totalForceY = springForce.y + electroForce.y + centerRepulsiveForce.y*40;
         node.x += totalForceX;
         node.y += totalForceY;
         totalForce += (Math.abs(totalForceX) + Math.abs(totalForceY));
     });
-
-    return totalForce < 0.01;
+    return totalForce < 0.1;
 }
 
-function drawLinks(nodesToDraw, svgBoard) {
+function drawLinks(nodesToDraw) {
     svgBoard.selectAll(".newLinks")
         .data(nodesToDraw)
         .enter()
@@ -72,15 +81,14 @@ function drawLinks(nodesToDraw, svgBoard) {
     svgBoard.selectAll(".newLinks")
         .data(nodesToDraw)
         .attr("class", "links")
-        .transition()
-        .duration(1500)
+        .transition().duration(1500)
         .attr("d", function(node) {
             return `M ${node.parent.x},${node.parent.y} L ${node.x},${node.y}`
         });
 }
 
-function drawNodesOfDepth(fixedNodesInTheBoard, depthMap, depth, svgBoard) {
-    let nodesToDraw = depthMap.get(depth);
+function drawNodesOfCurrentDepth() {
+    let nodesToDraw = depthMap.get(currentDepth);
     svgBoard.selectAll(".newCircle")
         .data(nodesToDraw)
         .enter()
@@ -94,64 +102,69 @@ function drawNodesOfDepth(fixedNodesInTheBoard, depthMap, depth, svgBoard) {
         .attr("class", "newCircle");
 
     let didNodesConverge = false;
-    while (!didNodesConverge)
-        didNodesConverge = updateNodes(fixedNodesInTheBoard, depthMap, depth, svgBoard);
+    let iterations = 0;
+    while (!didNodesConverge) {
+        didNodesConverge = updateNodes();
+        iterations += 1;
+        if (iterations === 2000) break;
+    }
 
     svgBoard.selectAll(".newCircle")
-        .data(depthMap.get(depth))
-        .transition()
-        .duration(750)
+        .data(nodesToDraw)
+        .transition().duration(750)
         .attr("cx", node => node.x)
         .attr("cy", node => node.y)
         .attr("class", "fixedCircle");
 
-    if (depth !== 0) drawLinks(nodesToDraw, svgBoard);
+    if (currentDepth !== 0) drawLinks(nodesToDraw);
+
+    nodesToDraw.forEach(function(node) {
+        node.isFixed = true;
+    })
 }
 
-function assignRandomInitialPositions(depthMap) {
-    depthMap.get(0)[0].x = boardWidth / 2;
-    depthMap.get(0)[0].y = boardHeight / 2;
-
-    const xRandomScale = d3.scaleLinear();
-    const yRandomScale = d3.scaleLinear();
-    xRandomScale.domain([0, 1]);
-    yRandomScale.domain([0, 1]);
-    xRandomScale.range([0, boardWidth]);
-    yRandomScale.range([boardHeight, 0]);
-
-    for (i = 1; i < depthMap.size; i++) {
-        depthMap.get(i).forEach(function (node) {
-            node.x = parseFloat(xRandomScale(Math.random()));
-            node.y = parseFloat(yRandomScale(Math.random()));
-        });
-    }
-}
-
-let fixedNodesInTheBoard = [];
-let currentDepth = -1;
-let svg;
-let depthMapGlobal;
-
-d3.json("data.json")
+d3.json("data100.json")
     .then(function(data) {
-        const svgBoard = d3.select("#svg-board");
-        svg = svgBoard;
+        svgBoard = d3.select("#svg-board");
         svgBoard.attr("width", boardWidth);
         svgBoard.attr("height", boardHeight);
         const root = computeTree(data);
-        const depthMap = createDepthMap(root);
-        depthMapGlobal = depthMap;
+        depthMap = createDepthMap(root);
         // assingLevels(depthMap);
         assignRandomInitialPositions(depthMap);
         // calculateSubtreeSizes(root);
-        drawNextLayer();
     })
     .catch(error => console.log(error));
 
 function drawNextLayer() {
     currentDepth += 1;
-    drawNodesOfDepth(fixedNodesInTheBoard, depthMapGlobal, currentDepth, svg);
-    fixedNodesInTheBoard = fixedNodesInTheBoard.concat(depthMapGlobal.get(currentDepth));
-    if (currentDepth === depthMapGlobal.size-1)
-        document.getElementById('draw-next-layer').remove();
+    drawNodesOfCurrentDepth();
+    fixedNodesInTheBoard = fixedNodesInTheBoard.concat(depthMap.get(currentDepth));
+}
+
+function drawTree() {
+    for (i = 0; i < depthMap.size; i++)
+        setTimeout(() => {
+            drawNextLayer(i);
+        }, i*timeoutBetweenLayers);
+    document.getElementById('draw-tree').hidden = true;
+    document.getElementById('redraw-tree').hidden = false;
+}
+
+function redrawTree() {
+    svgBoard.selectAll("*").remove();
+    fixedNodesInTheBoard = [];
+    currentDepth = -1;
+    assignRandomInitialPositions(depthMap);
+    drawTree();
+}
+
+function normalizeVector(vector) {
+    const x = vector.x;
+    const y = vector.y;
+    const magnitude = Math.sqrt(x*x + y*y);
+    if (magnitude === 0)
+        return vector;
+    vector.x /= magnitude;
+    vector.y /= magnitude;
 }

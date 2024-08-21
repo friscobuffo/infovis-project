@@ -50,3 +50,34 @@ function calculateSubtreeSizes(node) {
     node.subtreeSize = size;
     return size;
 }
+
+// this function ensures no two nodes have the same x or the same y
+function assignRandomInitialPositions() {
+    depthMap.get(0)[0].x = boardWidth / 2;
+    depthMap.get(0)[0].y = boardHeight / 2;
+
+    const xRandomScale = d3.scaleLinear();
+    const yRandomScale = d3.scaleLinear();
+    xRandomScale.domain([0, 1]);
+    yRandomScale.domain([0, 1]);
+    xRandomScale.range([0, boardWidth]);
+    yRandomScale.range([boardHeight, 0]);
+
+    const assignedXs = new Set();
+    const assignedYs = new Set();
+
+    for (i = 1; i < depthMap.size; i++) {
+        depthMap.get(i).forEach(function (node) {
+            let x = parseFloat(xRandomScale(Math.random()));
+            while (assignedXs.has(x))
+                x = parseFloat(xRandomScale(Math.random()));
+            let y = parseFloat(yRandomScale(Math.random()));
+            while (assignedYs.has(y))
+                y = parseFloat(yRandomScale(Math.random()));
+            node.x = parseFloat(xRandomScale(Math.random()));
+            node.y = parseFloat(yRandomScale(Math.random()));
+            assignedXs.add(x);
+            assignedYs.add(y);
+        });
+    }
+}
