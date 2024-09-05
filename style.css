@@ -1,0 +1,12 @@
+#svg-board {
+    border: 2px solid black;
+}
+
+body {
+    display: flex;
+    justify-content: left;
+}
+
+#command-window {
+    padding-left: 10px;
+}

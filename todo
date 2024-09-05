@@ -1,2 +1,2 @@
-se il child è piu vicino alla root del parent tiragli una schicchera
-verso l'esterno e ricomputa
+fare in modo che il disegno non puo uscire dai bordi
+(quindi boh si rimpicciolisce quando esce fuori)

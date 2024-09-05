@@ -4,17 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InfoVis Project</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <svg id="svg-board"></svg>
+    <div id="command-window">
+        <h3>Command Window</h3>
+
+        <button id="draw-tree" onclick="drawTree()">Draw Tree</button>
+        <button id="redraw-tree" onclick="redrawTree()" hidden>Redraw Tree</button>
+        <br><br>
+
+        <input type="checkbox" id="center-repulsive-force-box" checked>
+        <label for="center-repulsive-force-box">Use Center Repulsive Force</label>
+        <br><br>
+
+        <label for="center-repulsive-force-multiplier">Center Repulsive Force Multiplier</label>
+        <input type="number" id="center-repulsive-force-multiplier">
+
+        <br><br>
+        <input type="range" id="slider-elastic-constant" min="0" max="1" step="0.01" value="0.5">
+        <div>Elastic Constant: <span id="slider-elastic-constant-value">0.5</span></div>
+
+    </div>
     <script src="http://d3js.org/d3.v7.min.js"></script>
     <script type="text/javascript" src="dataHandler.js"></script>
     <script type="text/javascript" src="script.js"></script>
-</head>
-<body>
-    <div>
-        <svg id="svg-board"></svg>
-    </div>
-    <div>
-        <button id="draw-tree" onclick="drawTree()">Draw Tree</button>
-        <button id="redraw-tree" onclick="redrawTree()" hidden>Redraw Tree</button>
-    </div>
 </body>
 </html>

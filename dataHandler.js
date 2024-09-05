@@ -51,7 +51,7 @@ function calculateSubtreeSizes(node) {
     return size;
 }
 
-// this function ensures no two nodes have the same x or the same y
+// this function ensures no two nodes spawn with the same x or the same y
 function assignRandomInitialPositions() {
     depthMap.get(0)[0].x = boardWidth / 2;
     depthMap.get(0)[0].y = boardHeight / 2;

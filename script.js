@@ -1,7 +1,7 @@
-const boardHeight = Math.floor(0.8*window.screen.height);
-const boardWidth = Math.floor(0.8*window.screen.width);
+const boardHeight = Math.floor(0.7*window.screen.height);
+const boardWidth = Math.floor(0.5*window.screen.width);
 
-const elasticConstant = 0.8;
+let elasticConstant = 0.8;
 const baseSpringLength = 10.0;
 const electrostaticConstant = 6000;
 
@@ -10,7 +10,7 @@ let currentDepth = -1;
 let svgBoard;
 let depthMap;
 
-const timeoutBetweenLayers = 2000;
+const timeoutBetweenLayers = 1000;
 
 function distance(node1, node2) {
     deltaX = node1.x - node2.x;
@@ -45,8 +45,10 @@ function computeElectroForce(node, nodesOnBoard) {
     return {x: electroForceX, y: electroForceY};
 }
 
+let useCenterRepulsiveForce = true;
+let scale = 40;
+
 function updateNodes() {
-    console.log("updating nodes");
     if (currentDepth === 0) return true;
     let totalForce = 0.0;
     const nodesToUpdate = depthMap.get(currentDepth);
@@ -57,8 +59,9 @@ function updateNodes() {
         const centerRepulsiveForce = {x: (node.x - depthMap.get(0)[0].x),
                                       y: (node.y - depthMap.get(0)[0].y)};
         normalizeVector(centerRepulsiveForce);
-        const totalForceX = springForce.x + electroForce.x + centerRepulsiveForce.x*40;
-        const totalForceY = springForce.y + electroForce.y + centerRepulsiveForce.y*40;
+        if (!useCenterRepulsiveForce) scale = 0;
+        const totalForceX = springForce.x + electroForce.x + centerRepulsiveForce.x*scale;
+        const totalForceY = springForce.y + electroForce.y + centerRepulsiveForce.y*scale;
         node.x += totalForceX;
         node.y += totalForceY;
         totalForce += (Math.abs(totalForceX) + Math.abs(totalForceY));
@@ -81,7 +84,7 @@ function drawLinks(nodesToDraw) {
     svgBoard.selectAll(".newLinks")
         .data(nodesToDraw)
         .attr("class", "links")
-        .transition().duration(1500)
+        .transition().duration(750)
         .attr("d", function(node) {
             return `M ${node.parent.x},${node.parent.y} L ${node.x},${node.y}`
         });
@@ -111,7 +114,7 @@ function drawNodesOfCurrentDepth() {
 
     svgBoard.selectAll(".newCircle")
         .data(nodesToDraw)
-        .transition().duration(750)
+        .transition().duration(500)
         .attr("cx", node => node.x)
         .attr("cy", node => node.y)
         .attr("class", "fixedCircle");
@@ -168,3 +171,35 @@ function normalizeVector(vector) {
     vector.x /= magnitude;
     vector.y /= magnitude;
 }
+
+const checkboxUseCenterRepulsiveForce = document.getElementById('center-repulsive-force-box');
+const repulsiveForceMultiplierInput = document.getElementById('center-repulsive-force-multiplier');
+
+repulsiveForceMultiplierInput.value = scale;
+
+checkboxUseCenterRepulsiveForce.addEventListener('change', function(event) {
+    if (event.target.checked) {
+        useCenterRepulsiveForce = true;
+        repulsiveForceMultiplierInput.readOnly = false;
+    }
+    else {
+        useCenterRepulsiveForce = false;
+        repulsiveForceMultiplierInput.readOnly = true;
+    }
+});
+
+repulsiveForceMultiplierInput.addEventListener('input', function(event) {
+    if (event.target.value < 0) event.target.value *= -1;
+    scale = event.target.value;
+});
+
+const sliderElasticConstant = document.getElementById('slider-elastic-constant');
+const sliderElasticConstantValue = document.getElementById('slider-elastic-constant-value');
+
+sliderElasticConstant.value = elasticConstant;
+sliderElasticConstantValue.textContent = elasticConstant;
+
+sliderElasticConstant.addEventListener('input', function(event) {
+    sliderElasticConstantValue.textContent = event.target.value;
+    elasticConstant = event.target.value;
+});
