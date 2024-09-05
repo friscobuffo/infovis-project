@@ -19,13 +19,33 @@
         <label for="center-repulsive-force-box">Use Center Repulsive Force</label>
         <br><br>
 
-        <label for="center-repulsive-force-multiplier">Center Repulsive Force Multiplier</label>
-        <input type="number" id="center-repulsive-force-multiplier">
-
+        <label for="center-repulsive-force">Center Repulsive Force Value</label>
+        <input type="number" id="center-repulsive-force">
         <br><br>
+
         <input type="range" id="slider-elastic-constant" min="0" max="1" step="0.01" value="0.5">
         <div>Elastic Constant: <span id="slider-elastic-constant-value">0.5</span></div>
+        <br>
 
+        <label for="base-spring-length">Base Spring Length</label>
+        <input type="number" id="base-spring-length">
+        <br><br>
+        
+        <label for="electro-static-constant">Electrostatic Constant</label>
+        <input type="number" id="electro-static-constant">
+        <br><br>
+
+        <label for="time-between-layers">Time Between Layers (ms)</label>
+        <input type="number" id="time-between-layers">
+        <br><br>
+
+        <label for="nodes-animation-duration">Nodes Animation Duration (ms)</label>
+        <input type="number" id="nodes-animation-duration">
+        <br><br>
+
+        <label for="links-animation-duration">Links Animation Duration (ms)</label>
+        <input type="number" id="links-animation-duration">
+        <br><br>
     </div>
     <script src="http://d3js.org/d3.v7.min.js"></script>
     <script type="text/javascript" src="dataHandler.js"></script>
