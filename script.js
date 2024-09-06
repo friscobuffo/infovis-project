@@ -1,5 +1,5 @@
-const boardHeight = Math.floor(0.7*window.screen.height);
-const boardWidth = Math.floor(0.5*window.screen.width);
+const boardHeight = Math.floor(0.8*window.screen.height);
+const boardWidth = Math.floor(0.6*window.screen.width);
 
 let elasticConstant = 0.8;
 let baseSpringLength = 10.0;
@@ -8,6 +8,7 @@ let electrostaticConstant = 6000;
 let fixedNodesInTheBoard = [];
 let currentDepth = -1;
 let svgBoard;
+let drawingArea;
 let depthMap;
 
 let timeoutBetweenLayers = 1000;
@@ -72,7 +73,7 @@ function updateNodes() {
 }
 
 function drawLinks(nodesToDraw) {
-    svgBoard.selectAll(".newLinks")
+    drawingArea.selectAll(".newLinks")
         .data(nodesToDraw)
         .enter()
         .append("path")
@@ -83,7 +84,7 @@ function drawLinks(nodesToDraw) {
             return `M ${node.parent.x},${node.parent.y} L ${node.parent.x},${node.parent.y}`
         });
 
-    svgBoard.selectAll(".newLinks")
+    drawingArea.selectAll(".newLinks")
         .data(nodesToDraw)
         .attr("class", "links")
         .transition().duration(linksAnimationDuration)
@@ -94,7 +95,7 @@ function drawLinks(nodesToDraw) {
 
 function drawNodesOfCurrentDepth() {
     let nodesToDraw = depthMap.get(currentDepth);
-    svgBoard.selectAll(".newCircle")
+    drawingArea.selectAll(".newCircle")
         .data(nodesToDraw)
         .enter()
         .append("circle")
@@ -114,7 +115,7 @@ function drawNodesOfCurrentDepth() {
         if (iterations === 2000) break;
     }
 
-    svgBoard.selectAll(".newCircle")
+    drawingArea.selectAll(".newCircle")
         .data(nodesToDraw)
         .transition().duration(nodesAnimationDuration)
         .attr("cx", node => node.x)
@@ -133,11 +134,19 @@ d3.json("data100.json")
         svgBoard = d3.select("#svg-board");
         svgBoard.attr("width", boardWidth);
         svgBoard.attr("height", boardHeight);
+        drawingArea = svgBoard.append("g");
         const root = computeTree(data);
         depthMap = createDepthMap(root);
         // assingLevels(depthMap);
         assignRandomInitialPositions(depthMap);
-        // calculateSubtreeSizes(root);
+        // computeSubtreeSizes(root);
+
+        var zoom = d3.zoom()
+        zoom.scaleExtent([0.1, 2])
+            .on("zoom", function (event) {
+                drawingArea.attr("transform", event.transform);
+            });
+        svgBoard.call(zoom);
     })
     .catch(error => console.log(error));
 
@@ -154,10 +163,14 @@ function drawTree() {
         }, i*timeoutBetweenLayers);
     document.getElementById('draw-tree').hidden = true;
     document.getElementById('redraw-tree').hidden = false;
+    const root = depthMap.get(0)[0];
+    setTimeout(() => {
+        displayNumberOfCollisions(countCollisions(root));
+    }, depthMap.size*timeoutBetweenLayers);
 }
 
 function redrawTree() {
-    svgBoard.selectAll("*").remove();
+    drawingArea.selectAll("*").remove();
     fixedNodesInTheBoard = [];
     currentDepth = -1;
     assignRandomInitialPositions(depthMap);
@@ -235,3 +248,8 @@ linksAnimationDurationInput.addEventListener('input', function(event) {
     if (event.target.value < 0) event.target.value *= -1;
     linksAnimationDuration = event.target.value;
 });
+
+function displayNumberOfCollisions(collisions) {
+    const numberOfCollisionsSpan = document.getElementById('number-collisions');
+    numberOfCollisionsSpan.textContent = `Number Of Collisions: ${collisions}`;
+}

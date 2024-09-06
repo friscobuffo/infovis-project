@@ -41,11 +41,11 @@ function assingLevels(depthMap) {
     });
 }
 
-function calculateSubtreeSizes(node) {
+function computeSubtreeSizes(node) {
     if (!node) return 0;
     let size = 1;
     for (let child of node.children) {
-        size += calculateSubtreeSizes(child);
+        size += computeSubtreeSizes(child);
     }
     node.subtreeSize = size;
     return size;

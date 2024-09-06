@@ -1,4 +1,3 @@
-fare in modo che il disegno non puo uscire dai bordi
-(quindi boh si rimpicciolisce quando esce fuori)
-
-forse funzione che calcola il numero di crossings nel disegno?
+forse aggiungere bottone, dopo che è stato disegnato l'albero un layer
+alla volta, se premuto parte una funzione che prova a trovare un nuovo
+equilibrio considerando tutti i nodi insieme
