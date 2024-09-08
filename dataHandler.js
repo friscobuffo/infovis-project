@@ -74,8 +74,8 @@ function assignRandomInitialPositions() {
             let y = parseFloat(yRandomScale(Math.random()));
             while (assignedYs.has(y))
                 y = parseFloat(yRandomScale(Math.random()));
-            node.x = parseFloat(xRandomScale(Math.random()));
-            node.y = parseFloat(yRandomScale(Math.random()));
+            node.x = x;
+            node.y = y;
             assignedXs.add(x);
             assignedYs.add(y);
         });
