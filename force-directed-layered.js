@@ -1,7 +1,7 @@
-class ForceDirectedDrawer {
-    constructor(root, depthMap, drawingArea) {
+class ForceDirectedLayeredDrawer {
+    constructor(root, drawingArea) {
         this._root = root;
-        this._depthMap = depthMap;
+        this._depthMap = createDepthMap(root);
         this._drawingArea = drawingArea;
         
         this._elasticConstant = 0.8;
@@ -12,6 +12,8 @@ class ForceDirectedDrawer {
         this._centerRepulsiveForceValue = 40;
         
         this._timeoutBetweenLayers = 1000;
+        
+        this._freezeDrawnNodes = true;
 
         this._initializeButtons();
     }
@@ -43,6 +45,16 @@ class ForceDirectedDrawer {
         return {x: electroForceX, y: electroForceY};
     }
 
+    _computeCenterRepulsiveForce(node) {
+        const center = this._root;
+        let centerRepulsiveForce = {x: (node.x - center.x),
+                                    y: (node.y - center.y)};
+        normalizeVector(centerRepulsiveForce);
+        centerRepulsiveForce.x *= this._centerRepulsiveForceValue;
+        centerRepulsiveForce.y *= this._centerRepulsiveForceValue;
+        return centerRepulsiveForce;
+    }
+
     _updateNodes(depth, fixedNodesInTheBoard) {
         if (depth === 0) return true;
         let totalForce = 0.0;
@@ -51,18 +63,12 @@ class ForceDirectedDrawer {
         nodesToUpdate.forEach((node) => {
             const springForce = this._computeSpringForce(node);
             const electroForce = this._computeElectroForce(node, nodesOnBoard);
+            let totalForceX = springForce.x + electroForce.x;
+            let totalForceY = springForce.y + electroForce.y;
             if (this._useCenterRepulsiveForce) {
-                const centerRepulsiveDirection = {x: (node.x - this._depthMap.get(0)[0].x),
-                                                  y: (node.y - this._depthMap.get(0)[0].y)};
-                normalizeVector(centerRepulsiveDirection);
-                var totalForceX = springForce.x + electroForce.x + 
-                                  centerRepulsiveDirection.x*this._centerRepulsiveForceValue;
-                var totalForceY = springForce.y + electroForce.y +
-                                  centerRepulsiveDirection.y*this._centerRepulsiveForceValue;
-            }
-            else {
-                var totalForceX = springForce.x + electroForce.x;
-                var totalForceY = springForce.y + electroForce.y;
+                const centerRepulsiveForce = this._computeCenterRepulsiveForce(node);
+                totalForceX += centerRepulsiveForce.x;
+                totalForceY += centerRepulsiveForce.y;
             }
             node.x += totalForceX;
             node.y += totalForceY;
@@ -71,7 +77,7 @@ class ForceDirectedDrawer {
         return totalForce < 0.1;
     }
 
-    _drawNodesOfDepth(depth, fixedNodesInTheBoard, nodesAnimationDuration, linksAnimationDuration) {
+    _drawNodesOfDepth(depth, fixedNodesInTheBoard, nodesAnimationDuration) {
         let nodesToDraw = this._depthMap.get(depth);
         this._drawingArea.selectAll(".newCircle")
             .data(nodesToDraw)
@@ -81,8 +87,8 @@ class ForceDirectedDrawer {
             .attr("stroke", "black")
             .attr("stroke-width", 10)
             .attr("r", 5)
-            .attr("cx", node => node.x)
-            .attr("cy", node => node.y)
+            .attr("cx", node => node.parent.x)
+            .attr("cy", node => node.parent.y)
             .attr("class", "newCircle");
     
         let didNodesConverge = false;
@@ -100,8 +106,8 @@ class ForceDirectedDrawer {
             .attr("cy", node => node.y)
             .attr("class", "fixedCircle");
     
-        if (depth !== 0) this._drawLinks(nodesToDraw, linksAnimationDuration);
-
+        if (depth !== 0) this._drawLinks(nodesToDraw, nodesAnimationDuration);
+        
         fixedNodesInTheBoard.push(...nodesToDraw);
     }
     
@@ -126,17 +132,32 @@ class ForceDirectedDrawer {
             });
     }
 
-    drawTree(nodesAnimationDuration, linksAnimationDuration) {
+    _drawRoot() {
+        let nodesToDraw = this._depthMap.get(0);
+        this._drawingArea.selectAll(".fixedCircle")
+            .data(nodesToDraw)
+            .enter()
+            .append("circle")
+            .attr("fill", `hsl(50, 100%, 50%)`)
+            .attr("stroke", "black")
+            .attr("stroke-width", 10)
+            .attr("r", 5)
+            .attr("cx", node => node.x)
+            .attr("cy", node => node.y)
+            .attr("class", "fixedCircle");
+    }
+
+    drawTree(nodesAnimationDuration) {
         drawingArea.selectAll("*").remove();
-        let fixedNodesInTheBoard = [];
         assignRandomInitialPositions(this._depthMap);
-        for (let depth = 0; depth < this._depthMap.size; depth++)
+        this._drawRoot();
+        let fixedNodesInTheBoard = [this._root];
+        for (let depth = 1; depth < this._depthMap.size; depth++)
             setTimeout(() => {
-                this._drawNodesOfDepth(depth, fixedNodesInTheBoard, nodesAnimationDuration, linksAnimationDuration);
+                this._drawNodesOfDepth(depth, fixedNodesInTheBoard, nodesAnimationDuration);
             }, depth*this._timeoutBetweenLayers);
-        const root = this._depthMap.get(0)[0];
         setTimeout(() => {
-            displayNumberOfCollisions(countCollisions(root));
+            displayNumberOfCollisions(this._root);
         }, this._depthMap.size*this._timeoutBetweenLayers);
     }
 
@@ -163,7 +184,7 @@ class ForceDirectedDrawer {
         const checkboxUseCenterRepulsiveForce = document.getElementById('center-repulsive-force-box');
         const centerRepulsiveForceInput = document.getElementById('center-repulsive-force');
         centerRepulsiveForceInput.value = this._centerRepulsiveForceValue;
-        checkboxUseCenterRepulsiveForce.addEventListener('change', function(event) {
+        checkboxUseCenterRepulsiveForce.addEventListener('change', (event) => {
             if (event.target.checked) {
                 this._useCenterRepulsiveForce = true;
                 centerRepulsiveForceInput.readOnly = false;
@@ -173,7 +194,7 @@ class ForceDirectedDrawer {
                 centerRepulsiveForceInput.readOnly = true;
             }
         });
-        centerRepulsiveForceInput.addEventListener('input', function(event) {
+        centerRepulsiveForceInput.addEventListener('input', (event) => {
             if (event.target.value < 0) event.target.value *= -1;
             this._centerRepulsiveForceValue = event.target.value;
         });
@@ -182,27 +203,28 @@ class ForceDirectedDrawer {
         const sliderElasticConstantValue = document.getElementById('slider-elastic-constant-value');
         sliderElasticConstant.value = this._elasticConstant;
         sliderElasticConstantValue.textContent = this._elasticConstant;
-        sliderElasticConstant.addEventListener('input', function(event) {
+        sliderElasticConstant.addEventListener('input', (event) => {
             sliderElasticConstantValue.textContent = event.target.value;
             this._elasticConstant = event.target.value;
         });
         const baseSprintLengthInput = document.getElementById('base-spring-length');
         baseSprintLengthInput.value = this._baseSpringLength;
-        baseSprintLengthInput.addEventListener('input', function(event) {
+        baseSprintLengthInput.addEventListener('input', (event) => {
+            console.log(event.target.value, this._baseSpringLength);
             if (event.target.value < 0) event.target.value *= -1;
             this._baseSpringLength = event.target.value;
         });
         // electrostatic force
         const electroStaticConstantInput = document.getElementById('electro-static-constant');
         electroStaticConstantInput.value = this._electrostaticConstant;
-        electroStaticConstantInput.addEventListener('input', function(event) {
+        electroStaticConstantInput.addEventListener('input', (event) => {
             if (event.target.value < 0) event.target.value *= -1;
             this._electrostaticConstant = event.target.value;
         });
         // timer between layers
         const timeBetweenLayersInput = document.getElementById('time-between-layers');
         timeBetweenLayersInput.value = this._timeoutBetweenLayers;
-        timeBetweenLayersInput.addEventListener('input', function(event) {
+        timeBetweenLayersInput.addEventListener('input', (event) => {
             if (event.target.value < 0) event.target.value *= -1;
             this._timeoutBetweenLayers = event.target.value;
         });

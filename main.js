@@ -3,11 +3,12 @@ const boardWidth = Math.floor(0.6*window.screen.width);
 
 let svgBoard;
 let drawingArea;
-let depthMap;
+
+let forceDirectedLayeredDrawer;
+let forceDirectedBasicDrawer;
 let currentDrawer;
 
-let nodesAnimationDuration = 500;
-let linksAnimationDuration = 750;
+let nodesAnimationDuration = 750;
 
 d3.json("data100.json")
     .then(function(data) {
@@ -16,10 +17,8 @@ d3.json("data100.json")
         svgBoard.attr("height", boardHeight);
         drawingArea = svgBoard.append("g");
         const root = computeTree(data);
-        depthMap = createDepthMap(root);
-        // assingLevels(depthMap);
-        // computeSubtreeSizes(root);
-        currentDrawer = new ForceDirectedDrawer(root, depthMap, drawingArea);
+        forceDirectedLayeredDrawer = new ForceDirectedLayeredDrawer(root, drawingArea);
+        currentDrawer = forceDirectedLayeredDrawer;
         var zoom = d3.zoom();
         zoom.scaleExtent([0.1, 2])
             .on("zoom", function (event) {
@@ -30,9 +29,8 @@ d3.json("data100.json")
     .catch(error => console.log(error));
 
 function drawTree() {
-    currentDrawer.drawTree(nodesAnimationDuration, linksAnimationDuration);
+    currentDrawer.drawTree(nodesAnimationDuration);
 }
-
 
 const nodesAnimationDurationInput = document.getElementById('nodes-animation-duration');
 nodesAnimationDurationInput.value = nodesAnimationDuration;
@@ -40,15 +38,3 @@ nodesAnimationDurationInput.addEventListener('input', function(event) {
     if (event.target.value < 0) event.target.value *= -1;
     nodesAnimationDuration = event.target.value;
 });
-
-const linksAnimationDurationInput = document.getElementById('links-animation-duration');
-linksAnimationDurationInput.value = linksAnimationDuration;
-linksAnimationDurationInput.addEventListener('input', function(event) {
-    if (event.target.value < 0) event.target.value *= -1;
-    linksAnimationDuration = event.target.value;
-});
-
-function displayNumberOfCollisions(collisions) {
-    const numberOfCollisionsSpan = document.getElementById('number-collisions');
-    numberOfCollisionsSpan.textContent = `Number Of Collisions: ${collisions}`;
-}

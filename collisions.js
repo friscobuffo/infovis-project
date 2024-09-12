@@ -10,11 +10,8 @@ function computeOrientation(p, q, r) {
 
 // Check if point q lies on the segment pr
 function onSegment(p, q, r) {
-    if (q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) &&
-        q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y)) {
-        return true;
-    }
-    return false;
+    return (q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) &&
+            q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y))
 }
 
 function doIntersect(p1, q1, p2, q2) {
@@ -68,4 +65,10 @@ function countCollisions(tree) {
                 totalCollisions++;
         }
     return totalCollisions;
+}
+
+function displayNumberOfCollisions(root) {
+    collisions = countCollisions(root);
+    const numberOfCollisionsSpan = document.getElementById('number-collisions');
+    numberOfCollisionsSpan.textContent = `Number Of Collisions: ${collisions}`;
 }

@@ -13,3 +13,17 @@ function normalizeVector(vector) {
     vector.x /= magnitude;
     vector.y /= magnitude;
 }
+
+function inorderLeafVisit(root) {
+    const result = [];
+    function inorder(node) {
+        if (!node) return;
+        const numChildren = node.children.length;
+        for (let i = 0; i < numChildren; i++)
+            inorder(node.children[i]);
+        if (numChildren === 0)
+            result.push(node);
+    }
+    inorder(root);
+    return result;
+}
