@@ -23,6 +23,11 @@
         <input type="number" id="center-repulsive-force">
         <br><br>
 
+        <h3>Freeze Drawn Nodes</h3>
+        <input type="checkbox" id="freeze-drawn-nodes-box" checked>
+        <label for="freeze-drawn-nodes-box">Freeze Drawn Nodes</label>
+        <br><br>
+
         <h3>Elastic Force</h3>
         <input type="range" id="slider-elastic-constant" min="0" max="1" step="0.01" value="0.5">
         <div>Elastic Constant: <span id="slider-elastic-constant-value">0.5</span></div>
@@ -40,15 +45,14 @@
         <label for="time-between-layers">Time Between Layers (ms)</label>
         <input type="number" id="time-between-layers">
         <br><br>
-        <label for="nodes-animation-duration">Nodes Animation Duration (ms)</label>
-        <input type="number" id="nodes-animation-duration">
+        <label for="animation-duration">Animation Duration (ms)</label>
+        <input type="number" id="animation-duration">
         <br><br>
     </div>
 
     <script src="http://d3js.org/d3.v7.min.js"></script>
     <script type="text/javascript" src="utils.js"></script>
     <script type="text/javascript" src="collisions.js"></script>
-    <script type="text/javascript" src="data-handler.js"></script>
     <script type="text/javascript" src="force-directed-layered.js"></script>
     <script type="text/javascript" src="force-directed-basic.js"></script>
     <script type="text/javascript" src="main.js"></script>

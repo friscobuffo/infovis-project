@@ -1,27 +1,24 @@
 const boardHeight = Math.floor(0.8*window.screen.height);
 const boardWidth = Math.floor(0.6*window.screen.width);
 
-let svgBoard;
-let drawingArea;
-
 let forceDirectedLayeredDrawer;
-let forceDirectedBasicDrawer;
 let currentDrawer;
 
-let nodesAnimationDuration = 750;
+let animationDuration = 750;
 
 d3.json("data100.json")
     .then(function(data) {
-        svgBoard = d3.select("#svg-board");
+        const  svgBoard = d3.select("#svg-board");
         svgBoard.attr("width", boardWidth);
         svgBoard.attr("height", boardHeight);
-        drawingArea = svgBoard.append("g");
+        const drawingArea = svgBoard.append("g");
         const root = computeTree(data);
-        forceDirectedLayeredDrawer = new ForceDirectedLayeredDrawer(root, drawingArea);
+        assingLevels(root);
+        forceDirectedLayeredDrawer = new ForceDirectedLayeredBasic(root, drawingArea);
         currentDrawer = forceDirectedLayeredDrawer;
         var zoom = d3.zoom();
         zoom.scaleExtent([0.1, 2])
-            .on("zoom", function (event) {
+            .on("zoom", (event) => {
                 drawingArea.attr("transform", event.transform);
             });
         svgBoard.call(zoom);
@@ -29,12 +26,12 @@ d3.json("data100.json")
     .catch(error => console.log(error));
 
 function drawTree() {
-    currentDrawer.drawTree(nodesAnimationDuration);
+    currentDrawer.drawTree(animationDuration);
 }
 
-const nodesAnimationDurationInput = document.getElementById('nodes-animation-duration');
-nodesAnimationDurationInput.value = nodesAnimationDuration;
-nodesAnimationDurationInput.addEventListener('input', function(event) {
+const animationDurationInput = document.getElementById('animation-duration');
+animationDurationInput.value = animationDuration;
+animationDurationInput.addEventListener('input', function(event) {
     if (event.target.value < 0) event.target.value *= -1;
-    nodesAnimationDuration = event.target.value;
+    animationDuration = event.target.value;
 });
