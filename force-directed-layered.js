@@ -4,16 +4,16 @@ class ForceDirectedLayeredDrawer {
         this._depthMap = createDepthMap(root);
         this._drawingArea = drawingArea;
         
-        this._elasticConstant = 0.8;
+        this._elasticConstant = 0.3;
         this._baseSpringLength = 10.0;
         this._electrostaticConstant = 6000;
 
-        this._useCenterRepulsiveForce = true;
+        this._useCenterRepulsiveForce = false;
         this._centerRepulsiveForceValue = 40;
         
         this._timeoutBetweenLayers = 2000;
         this._freezeDrawnNodes = true;
-        this._maxIterations = 1500;
+        this._maxIterations = 2000;
 
         this._initializeButtons();
     }
@@ -203,24 +203,36 @@ class ForceDirectedLayeredDrawer {
         checkboxFreezeDrawnNodes.checked = this._freezeDrawnNodes;
         checkboxFreezeDrawnNodes.addEventListener('change', (event) => {
             this._freezeDrawnNodes = event.target.checked;
+            if (!this._freezeDrawnNodes) {
+                checkboxUseCenterRepulsiveForce.checked = false;
+                checkboxUseCenterRepulsiveForce.disabled = true;
+                centerRepulsiveForceInput.readOnly = true;
+                this._useCenterRepulsiveForce = false;
+            }
+            else {
+                checkboxUseCenterRepulsiveForce.checked = false;
+                checkboxUseCenterRepulsiveForce.disabled = false;
+                centerRepulsiveForceInput.readOnly = false;
+                this._useCenterRepulsiveForce = false;
+            }
         });
         // elastic force
-        const sliderElasticConstant = document.getElementById('slider-elastic-constant');
-        const sliderElasticConstantValue = document.getElementById('slider-elastic-constant-value');
+        const sliderElasticConstant = document.getElementById('slider-elastic-constant-layered');
+        const sliderElasticConstantValue = document.getElementById('slider-elastic-constant-layered-value');
         sliderElasticConstant.value = this._elasticConstant;
         sliderElasticConstantValue.textContent = this._elasticConstant;
         sliderElasticConstant.addEventListener('input', (event) => {
             sliderElasticConstantValue.textContent = event.target.value;
             this._elasticConstant = event.target.value;
         });
-        const baseSprintLengthInput = document.getElementById('base-spring-length');
+        const baseSprintLengthInput = document.getElementById('base-spring-length-layered');
         baseSprintLengthInput.value = this._baseSpringLength;
         baseSprintLengthInput.addEventListener('input', (event) => {
             if (event.target.value < 0) event.target.value *= -1;
             this._baseSpringLength = event.target.value;
         });
         // electrostatic force
-        const electroStaticConstantInput = document.getElementById('electro-static-constant');
+        const electroStaticConstantInput = document.getElementById('electro-static-constant-layered');
         electroStaticConstantInput.value = this._electrostaticConstant;
         electroStaticConstantInput.addEventListener('input', (event) => {
             if (event.target.value < 0) event.target.value *= -1;
@@ -233,5 +245,51 @@ class ForceDirectedLayeredDrawer {
             if (event.target.value < 0) event.target.value *= -1;
             this._timeoutBetweenLayers = event.target.value;
         });
+    }
+
+    hideAllButtons() {
+        document.getElementById('center-repulsive-layered').hidden = true;
+        document.getElementById('freeze-layered').hidden = true;
+        document.getElementById('elastic-force-layered').hidden = true;
+        document.getElementById('electrostatic-layered').hidden = true;
+        document.getElementById('time-between-layers').hidden = true;
+    }
+
+    showAllButtons() {
+        document.getElementById('center-repulsive-layered').hidden = false;
+        document.getElementById('freeze-layered').hidden = false;
+        document.getElementById('elastic-force-layered').hidden = false;
+        document.getElementById('electrostatic-layered').hidden = false;
+        document.getElementById('time-between-layers').hidden = false;
+    }
+
+    _computeLayerPosition(depth, drawnNodes) {
+        let newNodes = this._depthMap.get(depth);
+        let iterationsNewNodes = 0;
+        while (true) {
+            const totalForceNewNodes = this._updateNodes(depth, newNodes, drawnNodes);
+            iterationsNewNodes += 1;
+            if (iterationsNewNodes === this._maxIterations || totalForceNewNodes < 0.1)
+                break;
+        }
+        if (!this._freezeDrawnNodes) {
+            let iterations = 0;
+            const nonRootNodes = drawnNodes.slice(1).concat(newNodes);
+            while (true) {
+                const totalForce = this._updateNodes(depth, nonRootNodes, [this._root]);
+                iterations += 1;
+                if (iterations === this._maxIterations || totalForce < 0.1)
+                    break;
+            }
+        }
+        drawnNodes.push(...newNodes);
+    }
+
+    // does not draw the tree
+    computeTree() {
+        assignRandomInitialPositions(this._depthMap);
+        let drawnNodes = [this._root];
+        for (let depth = 1; depth < this._depthMap.size; depth++)
+            this._computeLayerPosition(depth, drawnNodes);
     }
 }

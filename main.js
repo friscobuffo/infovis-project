@@ -2,6 +2,7 @@ const boardHeight = Math.floor(0.8*window.screen.height);
 const boardWidth = Math.floor(0.6*window.screen.width);
 
 let forceDirectedLayeredDrawer;
+let forceDirectedBasicDrawer;
 let currentDrawer;
 
 let animationDuration = 750;
@@ -14,8 +15,11 @@ d3.json("data100.json")
         const drawingArea = svgBoard.append("g");
         const root = computeTree(data);
         assingLevels(root);
-        forceDirectedLayeredDrawer = new ForceDirectedLayeredBasic(root, drawingArea);
+        forceDirectedBasicDrawer = new ForceDirectedBasicDrawer(root, drawingArea)
+        forceDirectedLayeredDrawer = new ForceDirectedLayeredDrawer(root, drawingArea);
         currentDrawer = forceDirectedLayeredDrawer;
+        forceDirectedBasicDrawer.hideAllButtons();
+        forceDirectedLayeredDrawer.showAllButtons();
         var zoom = d3.zoom();
         zoom.scaleExtent([0.1, 2])
             .on("zoom", (event) => {
@@ -29,9 +33,49 @@ function drawTree() {
     currentDrawer.drawTree(animationDuration);
 }
 
+function statTest() {
+    let totalCollisions = 0;
+    let totalTime = 0.0;
+    const iterations = 15;
+    let i = 0;
+    const updateProgress = () => {
+        if (i < iterations) {
+            const start = new Date().getTime();
+            currentDrawer.computeTree();
+            const elapsedTime = new Date().getTime() - start;
+            totalTime += elapsedTime;
+            totalCollisions += countCollisions(currentDrawer._root);
+            const progress = document.getElementById('stat-tests-progress');
+            progress.textContent = (((i + 1) * 100) / iterations).toFixed(2) + "%";
+            i++;
+            setTimeout(updateProgress, 0);
+        } else {
+            console.log("average collisions:", totalCollisions / iterations);
+            console.log("average time:", totalTime / iterations);
+        }
+    };
+    updateProgress();
+}
+
 const animationDurationInput = document.getElementById('animation-duration');
 animationDurationInput.value = animationDuration;
 animationDurationInput.addEventListener('input', function(event) {
     if (event.target.value < 0) event.target.value *= -1;
     animationDuration = event.target.value;
+});
+
+const dropdown = document.getElementById('algorithm-dropdown');
+dropdown.value = 'fd-layered';
+dropdown.addEventListener('change', (event) => {
+    const selectedAlgorithm = event.target.value;
+    if (selectedAlgorithm === "fd-basic") {
+        forceDirectedBasicDrawer.showAllButtons();
+        forceDirectedLayeredDrawer.hideAllButtons();
+        currentDrawer = forceDirectedBasicDrawer;
+    }
+    else if (selectedAlgorithm === "fd-layered") {
+        forceDirectedBasicDrawer.hideAllButtons();
+        forceDirectedLayeredDrawer.showAllButtons();
+        currentDrawer = forceDirectedLayeredDrawer;
+    }
 });

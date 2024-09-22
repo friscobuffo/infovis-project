@@ -1,12 +1,12 @@
-class ForceDirectedLayeredBasic {
+class ForceDirectedBasicDrawer {
     constructor(root, drawingArea) {
         this._root = root;
         this._drawingArea = drawingArea;
         
-        this._elasticConstant = 0.8;
+        this._elasticConstant = 0.25;
         this._baseSpringLength = 10.0;
         this._electrostaticConstant = 6000;
-        this._maxIterations = 1500;
+        this._maxIterations = 2000;
 
         const depthMap = createDepthMap(root);
         let nodes = [];
@@ -135,26 +135,41 @@ class ForceDirectedLayeredBasic {
 
     _initializeButtons() {
         // elastic force
-        const sliderElasticConstant = document.getElementById('slider-elastic-constant');
-        const sliderElasticConstantValue = document.getElementById('slider-elastic-constant-value');
+        const sliderElasticConstant = document.getElementById('slider-elastic-constant-basic');
+        const sliderElasticConstantValue = document.getElementById('slider-elastic-constant-basic-value');
         sliderElasticConstant.value = this._elasticConstant;
         sliderElasticConstantValue.textContent = this._elasticConstant;
         sliderElasticConstant.addEventListener('input', (event) => {
             sliderElasticConstantValue.textContent = event.target.value;
             this._elasticConstant = event.target.value;
         });
-        const baseSprintLengthInput = document.getElementById('base-spring-length');
+        const baseSprintLengthInput = document.getElementById('base-spring-length-basic');
         baseSprintLengthInput.value = this._baseSpringLength;
         baseSprintLengthInput.addEventListener('input', (event) => {
             if (event.target.value < 0) event.target.value *= -1;
             this._baseSpringLength = event.target.value;
         });
         // electrostatic force
-        const electroStaticConstantInput = document.getElementById('electro-static-constant');
+        const electroStaticConstantInput = document.getElementById('electro-static-constant-basic');
         electroStaticConstantInput.value = this._electrostaticConstant;
         electroStaticConstantInput.addEventListener('input', (event) => {
             if (event.target.value < 0) event.target.value *= -1;
             this._electrostaticConstant = event.target.value;
         });
+    }
+
+    hideAllButtons() {
+        document.getElementById('elastic-force-basic').hidden = true;
+        document.getElementById('electrostatic-basic').hidden = true;
+    }
+
+    showAllButtons() {
+        document.getElementById('elastic-force-basic').hidden = false;
+        document.getElementById('electrostatic-basic').hidden = false;
+    }
+
+    computeTree() {
+        assignRandomInitialPositions(this._depthMap);
+        this._computeNodesPositions();
     }
 }

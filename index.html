@@ -11,34 +11,63 @@
     <div id="control-panel">
         <h2>Control Panel</h2>
 
+        <label for="algorithm-dropdown">Algorithm:</label>
+        <select id="algorithm-dropdown">
+            <option value="fd-basic">Force Directed Basic</option>
+            <option value="fd-layered">Force Directed Layered</option>
+        </select>
+        <br><br>
+
         <button id="draw-tree" onclick="drawTree()">Draw Tree</button>
+        <button id="stat-tests" onclick="statTest()">Stat Tests</button>
+        <span id="stat-tests-progress"></span>
+        <br>
         <span id="number-collisions"></span>
-        <br><br>
+        <br>
 
-        <h3>Center Repulsive Force</h3>
-        <input type="checkbox" id="center-repulsive-force-box" checked>
-        <label for="center-repulsive-force-box">Use Center Repulsive Force</label>
-        <br><br>
-        <label for="center-repulsive-force">Center Repulsive Force Value</label>
-        <input type="number" id="center-repulsive-force">
-        <br><br>
+        <div id="center-repulsive-layered">
+            <h3>Center Repulsive Force</h3>
+            <input type="checkbox" id="center-repulsive-force-box" checked>
+            <label for="center-repulsive-force-box">Use Center Repulsive Force</label>
+            <br><br>
+            <label for="center-repulsive-force">Center Repulsive Force Value</label>
+            <input type="number" id="center-repulsive-force">
+            <br><br>
+        </div>
 
-        <h3>Freeze Drawn Nodes</h3>
-        <input type="checkbox" id="freeze-drawn-nodes-box" checked>
-        <label for="freeze-drawn-nodes-box">Freeze Drawn Nodes</label>
-        <br><br>
+        <div id="freeze-layered">
+            <h3>Freeze Drawn Nodes</h3>
+            <input type="checkbox" id="freeze-drawn-nodes-box" checked>
+            <label for="freeze-drawn-nodes-box">Freeze Drawn Nodes</label>
+            <br><br>
+        </div>
 
         <h3>Elastic Force</h3>
-        <input type="range" id="slider-elastic-constant" min="0" max="1" step="0.01" value="0.5">
-        <div>Elastic Constant: <span id="slider-elastic-constant-value">0.5</span></div>
-        <br>
-        <label for="base-spring-length">Base Spring Length</label>
-        <input type="number" id="base-spring-length">
+        <div id="elastic-force-layered">
+            <input type="range" id="slider-elastic-constant-layered" min="0" max="1" step="0.01">
+            <div>Elastic Constant: <span id="slider-elastic-constant-layered-value">0.5</span></div>
+            <br>
+            <label for="base-spring-length-layered">Base Spring Length</label>
+            <input type="number" id="base-spring-length-layered">
+        </div>
+        <div id="elastic-force-basic">
+            <input type="range" id="slider-elastic-constant-basic" min="0" max="1" step="0.01">
+            <div>Elastic Constant: <span id="slider-elastic-constant-basic-value">0.5</span></div>
+            <br>
+            <label for="base-spring-length-basic">Base Spring Length</label>
+            <input type="number" id="base-spring-length-basic">
+        </div>
         <br><br>
         
         <h3>Electrostatic Force</h3>
-        <label for="electro-static-constant">Electrostatic Constant</label>
-        <input type="number" id="electro-static-constant">
+        <div id="electrostatic-layered">
+            <label for="electro-static-constant-layered">Electrostatic Constant</label>
+            <input type="number" id="electro-static-constant-layered">
+        </div>
+        <div id="electrostatic-basic">
+            <label for="electro-static-constant-basic">Electrostatic Constant</label>
+            <input type="number" id="electro-static-constant-basic">
+        </div>
         <br><br>
 
         <h3>Timers and animations</h3>
