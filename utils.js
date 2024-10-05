@@ -60,8 +60,8 @@ function assignRandomInitialPositions(depthMap) {
     const yRandomScale = d3.scaleLinear();
     xRandomScale.domain([0, 1]);
     yRandomScale.domain([0, 1]);
-    xRandomScale.range([0, boardWidth]);
-    yRandomScale.range([boardHeight, 0]);
+    xRandomScale.range([-2*boardWidth, 3*boardWidth]);
+    yRandomScale.range([3*boardHeight, -2*boardHeight]);
 
     const assignedXs = new Set();
     const assignedYs = new Set();

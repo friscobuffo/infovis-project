@@ -4,15 +4,11 @@ class ForceDirectedLayeredDrawer {
         this._depthMap = createDepthMap(root);
         this._drawingArea = drawingArea;
         
-        this._elasticConstant = 0.3;
-        this._baseSpringLength = 10.0;
-        this._electrostaticConstant = 6000;
+        this._elasticConstant = 0.20;
+        this._baseSpringLength = 45.0;
+        this._electrostaticConstant = 12000;
 
-        this._useCenterRepulsiveForce = false;
-        this._centerRepulsiveForceValue = 40;
-        
-        this._timeoutBetweenLayers = 2000;
-        this._freezeDrawnNodes = true;
+        this._maxIterationsNewNodes = 500;
         this._maxIterations = 2000;
 
         this._initializeButtons();
@@ -47,24 +43,13 @@ class ForceDirectedLayeredDrawer {
         nodesOnBoard.forEach((otherNode) => {
             if (otherNode.id === node.id) return;
             const d = distance(node, otherNode);
-            const multiplier = 1.0 + 2*node.children.length + 2*otherNode.children.length;
-            const electroTerm = multiplier*(this._electrostaticConstant)/(d*d);
+            const electroTerm = (this._electrostaticConstant)/(d*d);
             const deltaX = node.x - otherNode.x;
             const deltaY = node.y - otherNode.y;
             electroForceX += electroTerm*(deltaX/d);
             electroForceY += electroTerm*(deltaY/d);
         });
         return {x: electroForceX, y: electroForceY};
-    }
-
-    _computeCenterRepulsiveForce(node) {
-        const center = this._root;
-        let centerRepulsiveForce = {x: (node.x - center.x),
-                                    y: (node.y - center.y)};
-        normalizeVector(centerRepulsiveForce);
-        centerRepulsiveForce.x *= this._centerRepulsiveForceValue;
-        centerRepulsiveForce.y *= this._centerRepulsiveForceValue;
-        return centerRepulsiveForce;
     }
 
     _updateNodes(depth, nodesToUpdate, fixedNodes) {
@@ -74,13 +59,8 @@ class ForceDirectedLayeredDrawer {
             if (node.id === this._root.id) return;
             const springForce = this._computeSpringForce(node, depth);
             const electroForce = this._computeElectroForce(node, nodesOnBoard);
-            let totalForceX = springForce.x + electroForce.x;
-            let totalForceY = springForce.y + electroForce.y;
-            if (this._useCenterRepulsiveForce) {
-                const centerRepulsiveForce = this._computeCenterRepulsiveForce(node);
-                totalForceX += centerRepulsiveForce.x;
-                totalForceY += centerRepulsiveForce.y;
-            }
+            const totalForceX = springForce.x + electroForce.x;
+            const totalForceY = springForce.y + electroForce.y;
             node.x += totalForceX;
             node.y += totalForceY;
             totalForce += (Math.abs(totalForceX) + Math.abs(totalForceY));
@@ -88,8 +68,7 @@ class ForceDirectedLayeredDrawer {
         return totalForce;
     }
 
-    _drawNodesOfDepth(depth, drawnNodes, animationDuration) {
-        let newNodes = this._depthMap.get(depth);
+    _placeNewNodesAndLinks(newNodes) {
         this._drawingArea.selectAll(".newCircle")
             .data(newNodes)
             .enter()
@@ -98,8 +77,8 @@ class ForceDirectedLayeredDrawer {
             .attr("stroke", "black")
             .attr("stroke-width", 10)
             .attr("r", 5)
-            .attr("cx", node => node.parent.x)
-            .attr("cy", node => node.parent.y)
+            .attr("cx", node => node.x)
+            .attr("cy", node => node.y)
         this._drawingArea.selectAll(".newLinks")
             .data(newNodes)
             .enter()
@@ -107,43 +86,90 @@ class ForceDirectedLayeredDrawer {
             .attr("stroke-width", 5)
             .attr("stroke", "black")
             .attr("d", function(node) {
-                return `M ${node.parent.x},${node.parent.y} L ${node.parent.x},${node.parent.y}`
+                return `M ${node.parent.x},${node.parent.y} L ${node.x},${node.y}`
             });
-        // placing new nodes
-        let iterationsNewNodes = 0;
-        while (true) {
-            const totalForceNewNodes = this._updateNodes(depth, newNodes, drawnNodes);
-            iterationsNewNodes += 1;
-            if (iterationsNewNodes === this._maxIterations || totalForceNewNodes < 0.1)
-                break;
-        }
-        if (!this._freezeDrawnNodes) {
-            let iterations = 0;
-            const nonRootNodes = drawnNodes.slice(1).concat(newNodes);
-            while (true) {
-                const totalForce = this._updateNodes(depth, nonRootNodes, [this._root]);
-                iterations += 1;
-                if (iterations === this._maxIterations || totalForce < 0.1)
-                    break;
-            }
-        }
+    }
+
+    _updateAllNodesAndLinks(drawnNodes, newNodes, nonRootNodes, animationDuration) {
         this._drawingArea.selectAll("circle")
             .data(drawnNodes.concat(newNodes))
-            .transition().duration(animationDuration)
+            .transition().duration(250)
             .attr("cx", node => node.x)
             .attr("cy", node => node.y)
             .attr("class", "circle");
-
-        const nonRootNodes = drawnNodes.slice(1).concat(newNodes);
         this._drawingArea.selectAll("path")
             .data(nonRootNodes)
             .attr("class", "links")
-            .transition().duration(animationDuration)
+            .transition().duration(250)
             .attr("d", function(node) {
                 return `M ${node.parent.x},${node.parent.y} L ${node.x},${node.y}`
             });
+    }
 
-        drawnNodes.push(...newNodes);
+    _keepUpdatingNewNodes(depth, newNodes, drawnNodes, animationDuration, nonRootNodes) {
+        const totalForceNewNodes = this._updateNodes(depth, newNodes, drawnNodes);
+        this._iterationsNewNodes += 1;
+        const timerNowMilliseconds = performance.now();
+        if (timerNowMilliseconds - this._timerStartMilliseconds > 350) {
+            this._timerStartMilliseconds = timerNowMilliseconds;
+            setTimeout(() => {
+                displayNumberOfCollisions(this._root);
+                this._updateAllNodesAndLinks(drawnNodes, newNodes, nonRootNodes, animationDuration);
+            }, 0);
+        }
+        if (this._iterationsNewNodes === this._maxIterationsNewNodes || totalForceNewNodes < 0.5) {
+            this._iterationsAllNodes = 0;
+            setTimeout(() => {
+                this._keepUpdatingAllNodes(depth, nonRootNodes, newNodes, animationDuration, drawnNodes);
+            }, 0);
+            return;
+        }
+        setTimeout(() => {
+            this._keepUpdatingNewNodes(depth, newNodes, drawnNodes, animationDuration, nonRootNodes);
+        }, 0);
+    }
+
+    _keepUpdatingAllNodes(depth, nonRootNodes, newNodes, animationDuration, drawnNodes) {
+        const totalForce = this._updateNodes(depth, nonRootNodes, [this._root]);
+        this._iterationsAllNodes += 1;
+        const timerNowMilliseconds = performance.now();
+        if (timerNowMilliseconds - this._timerStartMilliseconds > 350) {
+            this._timerStartMilliseconds = timerNowMilliseconds;
+            setTimeout(() => {
+                displayNumberOfCollisions(this._root);
+                this._updateAllNodesAndLinks(drawnNodes, newNodes, nonRootNodes, animationDuration);
+            }, 0);
+        }
+        if (this._iterationsAllNodes === this._maxIterations || totalForce < 0.5) {
+            drawnNodes.push(...newNodes);
+            if (depth < this._depthMap.size-1)
+                setTimeout(() => {
+                    this._drawNodesOfDepth(depth+1, drawnNodes, animationDuration);
+                }, 0);
+            else {
+                setTimeout(() => {
+                    displayNumberOfCollisions(this._root);
+                    this._updateAllNodesAndLinks(drawnNodes, newNodes, nonRootNodes, animationDuration);
+                }, 350);
+            }
+            return;
+        }
+        setTimeout(() => {
+            this._keepUpdatingAllNodes(depth, nonRootNodes, newNodes, animationDuration, drawnNodes);
+        }, 0);
+    }
+
+    _drawNodesOfDepth(depth, drawnNodes, animationDuration) {
+        let newNodes = this._depthMap.get(depth);
+        newNodes.forEach((node) => {
+            node._countCollisions = true;
+        });
+        setTimeout(() => this._placeNewNodesAndLinks(newNodes), 0);
+        const nonRootNodes = drawnNodes.slice(1).concat(newNodes);
+        this._iterationsNewNodes = 0;
+        setTimeout(() => {
+            this._keepUpdatingNewNodes(depth, newNodes, drawnNodes, animationDuration, nonRootNodes);
+        }, 0);
     }
 
     _drawRoot() {
@@ -161,61 +187,22 @@ class ForceDirectedLayeredDrawer {
             .attr("class", "circle");
     }
 
-    drawTree(animationDuration) {
+    async drawTree(animationDuration) {
+        for (let i = 0; i < this._depthMap.size; i++) {
+            this._depthMap.get(i).forEach((node) => {
+                node._countCollisions = false;
+            });
+        }
         this._drawingArea.selectAll("*").remove();
         assignRandomInitialPositions(this._depthMap);
         this._drawRoot();
         let drawnNodes = [this._root];
-        for (let depth = 1; depth < this._depthMap.size; depth++) {
-            setTimeout(() => {
-                const start = new Date().getTime();
-                this._drawNodesOfDepth(depth, drawnNodes, animationDuration);
-                const elapsedTime = new Date().getTime() - start;
-            }, depth*this._timeoutBetweenLayers);
-        }
-        setTimeout(() => {
-            displayNumberOfCollisions(this._root);
-        }, this._depthMap.size*this._timeoutBetweenLayers);
+        this._root._countCollisions = true;
+        this._timerStartMilliseconds = performance.now();
+        this._drawNodesOfDepth(1, drawnNodes, animationDuration);
     }
 
     _initializeButtons() {
-        // center repulsive force
-        const checkboxUseCenterRepulsiveForce = document.getElementById('center-repulsive-force-box');
-        const centerRepulsiveForceInput = document.getElementById('center-repulsive-force');
-        checkboxUseCenterRepulsiveForce.checked = this._useCenterRepulsiveForce;
-        centerRepulsiveForceInput.value = this._centerRepulsiveForceValue;
-        checkboxUseCenterRepulsiveForce.addEventListener('change', (event) => {
-            if (event.target.checked) {
-                this._useCenterRepulsiveForce = true;
-                centerRepulsiveForceInput.readOnly = false;
-            }
-            else {
-                this._useCenterRepulsiveForce = false;
-                centerRepulsiveForceInput.readOnly = true;
-            }
-        });
-        centerRepulsiveForceInput.addEventListener('input', (event) => {
-            if (event.target.value < 0) event.target.value *= -1;
-            this._centerRepulsiveForceValue = event.target.value;
-        });
-        // freeze drawn nodes
-        const checkboxFreezeDrawnNodes = document.getElementById('freeze-drawn-nodes-box');
-        checkboxFreezeDrawnNodes.checked = this._freezeDrawnNodes;
-        checkboxFreezeDrawnNodes.addEventListener('change', (event) => {
-            this._freezeDrawnNodes = event.target.checked;
-            if (!this._freezeDrawnNodes) {
-                checkboxUseCenterRepulsiveForce.checked = false;
-                checkboxUseCenterRepulsiveForce.disabled = true;
-                centerRepulsiveForceInput.readOnly = true;
-                this._useCenterRepulsiveForce = false;
-            }
-            else {
-                checkboxUseCenterRepulsiveForce.checked = false;
-                checkboxUseCenterRepulsiveForce.disabled = false;
-                centerRepulsiveForceInput.readOnly = false;
-                this._useCenterRepulsiveForce = false;
-            }
-        });
         // elastic force
         const sliderElasticConstant = document.getElementById('slider-elastic-constant-layered');
         const sliderElasticConstantValue = document.getElementById('slider-elastic-constant-layered-value');
@@ -238,58 +225,49 @@ class ForceDirectedLayeredDrawer {
             if (event.target.value < 0) event.target.value *= -1;
             this._electrostaticConstant = event.target.value;
         });
-        // timer between layers
-        const timeBetweenLayersInput = document.getElementById('time-between-layers');
-        timeBetweenLayersInput.value = this._timeoutBetweenLayers;
-        timeBetweenLayersInput.addEventListener('input', (event) => {
-            if (event.target.value < 0) event.target.value *= -1;
-            this._timeoutBetweenLayers = event.target.value;
-        });
     }
 
     hideAllButtons() {
-        document.getElementById('center-repulsive-layered').hidden = true;
-        document.getElementById('freeze-layered').hidden = true;
         document.getElementById('elastic-force-layered').hidden = true;
         document.getElementById('electrostatic-layered').hidden = true;
-        document.getElementById('time-between-layers').hidden = true;
     }
 
     showAllButtons() {
-        document.getElementById('center-repulsive-layered').hidden = false;
-        document.getElementById('freeze-layered').hidden = false;
         document.getElementById('elastic-force-layered').hidden = false;
         document.getElementById('electrostatic-layered').hidden = false;
-        document.getElementById('time-between-layers').hidden = false;
     }
 
-    _computeLayerPosition(depth, drawnNodes) {
-        let newNodes = this._depthMap.get(depth);
+    _computeLayerPosition(depth, drawnNodes, newNodes) {
         let iterationsNewNodes = 0;
         while (true) {
             const totalForceNewNodes = this._updateNodes(depth, newNodes, drawnNodes);
             iterationsNewNodes += 1;
-            if (iterationsNewNodes === this._maxIterations || totalForceNewNodes < 0.1)
+            if (iterationsNewNodes === this._maxIterationsNewNodes || totalForceNewNodes < 0.5)
                 break;
         }
-        if (!this._freezeDrawnNodes) {
-            let iterations = 0;
-            const nonRootNodes = drawnNodes.slice(1).concat(newNodes);
-            while (true) {
-                const totalForce = this._updateNodes(depth, nonRootNodes, [this._root]);
-                iterations += 1;
-                if (iterations === this._maxIterations || totalForce < 0.1)
-                    break;
-            }
+        let iterations = 0;
+        const nonRootNodes = drawnNodes.slice(1).concat(newNodes);
+        while (true) {
+            const totalForce = this._updateNodes(depth, nonRootNodes, [this._root]);
+            iterations += 1;
+            if (iterations === this._maxIterations || totalForce < 0.5)
+                break;
         }
-        drawnNodes.push(...newNodes);
     }
 
     // does not draw the tree
     computeTree() {
+        for (let i = 0; i < this._depthMap.size; i++) {
+            this._depthMap.get(i).forEach((node) => {
+                node._countCollisions = true;
+            });
+        }
         assignRandomInitialPositions(this._depthMap);
         let drawnNodes = [this._root];
-        for (let depth = 1; depth < this._depthMap.size; depth++)
-            this._computeLayerPosition(depth, drawnNodes);
+        for (let depth = 1; depth < this._depthMap.size; depth++) {
+            let newNodes = this._depthMap.get(depth);
+            this._computeLayerPosition(depth, drawnNodes, newNodes);
+            drawnNodes.push(...newNodes);
+        }
     }
 }

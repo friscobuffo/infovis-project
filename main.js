@@ -7,7 +7,7 @@ let currentDrawer;
 
 let animationDuration = 750;
 
-d3.json("data100.json")
+d3.json("data1000.json")
     .then(function(data) {
         const  svgBoard = d3.select("#svg-board");
         svgBoard.attr("width", boardWidth);
@@ -50,19 +50,12 @@ function statTest() {
             i++;
             setTimeout(updateProgress, 0);
         } else {
-            console.log("average collisions:", totalCollisions / iterations);
+            console.log("average crossings:", totalCollisions / iterations);
             console.log("average time:", totalTime / iterations);
         }
     };
     updateProgress();
 }
-
-const animationDurationInput = document.getElementById('animation-duration');
-animationDurationInput.value = animationDuration;
-animationDurationInput.addEventListener('input', function(event) {
-    if (event.target.value < 0) event.target.value *= -1;
-    animationDuration = event.target.value;
-});
 
 const dropdown = document.getElementById('algorithm-dropdown');
 dropdown.value = 'fd-layered';

@@ -6,7 +6,7 @@ class ForceDirectedBasicDrawer {
         this._elasticConstant = 0.25;
         this._baseSpringLength = 10.0;
         this._electrostaticConstant = 6000;
-        this._maxIterations = 2000;
+        this._maxIterations = 20000;
 
         const depthMap = createDepthMap(root);
         let nodes = [];
@@ -45,8 +45,7 @@ class ForceDirectedBasicDrawer {
         this._nodes.forEach((otherNode) => {
             if (otherNode.id === node.id) return;
             const d = distance(node, otherNode);
-            const multiplier = 1.0 + 2*node.children.length + 2*otherNode.children.length;
-            const electroTerm = multiplier*(this._electrostaticConstant)/(d*d);
+            const electroTerm = this._electrostaticConstant/(d*d);
             const deltaX = node.x - otherNode.x;
             const deltaY = node.y - otherNode.y;
             electroForceX += electroTerm*(deltaX/d);
@@ -85,12 +84,47 @@ class ForceDirectedBasicDrawer {
         while (true) {
             const totalForceNewNodes = this._updateNodes();
             iterationsNewNodes += 1;
-            if (iterationsNewNodes === this._maxIterations || totalForceNewNodes < 0.1)
+            if (iterationsNewNodes === this._maxIterations || totalForceNewNodes < 0.5)
                 break;
         }
     }
 
-    _drawNodesAndLinks(animationDuration) {
+    _computeAndDrawTree() {
+        if (this._iterationsNewNodes === undefined)
+            this._iterationsNewNodes = 0;
+        const totalForceNewNodes = this._updateNodes();
+        this._iterationsNewNodes += 1;
+        if (this._iterationsNewNodes === this._maxIterations || totalForceNewNodes < 0.5) {
+            setTimeout(this._drawNodesAndLinks.bind(this), 500);
+            return;
+        }
+        const timerNowMilliseconds = performance.now();
+        if (timerNowMilliseconds - this._timerStartMilliseconds > 350) {
+            this._animationDuration = 2*(timerNowMilliseconds - this._timerStartMilliseconds);
+            setTimeout(this._drawNodesAndLinks.bind(this), 0);
+            this._timerStartMilliseconds = timerNowMilliseconds;
+        }
+        setTimeout(this._computeAndDrawTree.bind(this), 0);
+    }
+
+    _drawNodesAndLinks() {
+        this._drawingArea.selectAll("circle")
+                .data(this._nodes)
+                .transition().duration(this._animationDuration)
+                .attr("cx", node => node.x)
+                .attr("cy", node => node.y)
+        const nonRootNodes = this._nodes.slice(1);
+        this._drawingArea.selectAll("path")
+            .data(nonRootNodes)
+            .attr("class", "links")
+            .transition().duration(this._animationDuration)
+            .attr("d", (node) => {
+                return `M ${node.parent.x},${node.parent.y} L ${node.x},${node.y}`
+            });
+        displayNumberOfCollisions(this._root);
+    }
+
+    async _placeNodesAndLinks() {
         this._drawingArea.selectAll("circle")
             .data(this._nodes)
             .enter()
@@ -99,13 +133,8 @@ class ForceDirectedBasicDrawer {
             .attr("stroke", "black")
             .attr("stroke-width", 10)
             .attr("r", 5)
-            .attr("cx", _ => this._root.x)
-            .attr("cy", _ => this._root.y)
-        this._drawingArea.selectAll("circle")
-                .data(this._nodes)
-                .transition().duration(animationDuration)
-                .attr("cx", node => node.x)
-                .attr("cy", node => node.y)
+            .attr("cx", node => node.x)
+            .attr("cy", node => node.y)
         const nonRootNodes = this._nodes.slice(1);
         this._drawingArea.selectAll("path")
             .data(nonRootNodes)
@@ -113,24 +142,21 @@ class ForceDirectedBasicDrawer {
             .append("path")
             .attr("stroke-width", 5)
             .attr("stroke", "black")
-            .attr("d", (_) => {
-                return `M ${this._root.x},${this._root.y} L ${this._root.x},${this._root.y}`
-            });
-        this._drawingArea.selectAll("path")
-            .data(nonRootNodes)
             .attr("class", "links")
-            .transition().duration(animationDuration)
             .attr("d", (node) => {
                 return `M ${node.parent.x},${node.parent.y} L ${node.x},${node.y}`
             });
     }
 
-    drawTree(animationDuration) {
+    async drawTree(animationDuration) {
+        this._nodes.forEach((node) => {
+            node._countCollisions = true;
+        });
         this._drawingArea.selectAll("*").remove();
         assignRandomInitialPositions(this._depthMap);
-        this._computeNodesPositions();
-        this._drawNodesAndLinks(animationDuration);
-        displayNumberOfCollisions(this._root);
+        await this._placeNodesAndLinks();
+        this._timerStartMilliseconds = performance.now();
+        this._computeAndDrawTree();
     }
 
     _initializeButtons() {
@@ -169,6 +195,9 @@ class ForceDirectedBasicDrawer {
     }
 
     computeTree() {
+        this._nodes.forEach((node) => {
+            node._countCollisions = true;
+        });
         assignRandomInitialPositions(this._depthMap);
         this._computeNodesPositions();
     }

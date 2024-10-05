@@ -45,10 +45,13 @@ function doIntersect(p1, q1, p2, q2) {
 function countCollisions(tree) {
     let edges = [];
     function traverse(node) {
+        if (!node._countCollisions) return;
         if (node.children && node.children.length > 0)
             for (let child of node.children) {
-                edges.push([node, child]);
-                traverse(child);
+                if (child._countCollisions) {
+                    edges.push([node, child]);
+                    traverse(child);
+                }
             }
     }
     traverse(tree);
@@ -70,5 +73,5 @@ function countCollisions(tree) {
 function displayNumberOfCollisions(root) {
     collisions = countCollisions(root);
     const numberOfCollisionsSpan = document.getElementById('number-collisions');
-    numberOfCollisionsSpan.textContent = `Number Of Collisions: ${collisions}`;
+    numberOfCollisionsSpan.textContent = `Number Of Crossings: ${collisions}`;
 }
